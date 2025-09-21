@@ -4,7 +4,8 @@
   "description": "Assignment 2 — Bucket Buddy",
   "author": "Aditya Patel",
   "scripts": {
-    "start": "node server.improved.js"
+    "start": "node server.js"
+
   },
   "dependencies": {
     "connect-mongo": "^5.1.0",
