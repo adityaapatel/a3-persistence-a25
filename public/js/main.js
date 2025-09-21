@@ -25,7 +25,7 @@ const $ = (id) => document.getElementById(id);
 const toDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : "");
 const toDateTime = (iso) => (iso ? new Date(iso).toLocaleString() : "");
 
-// API helpers
+// --- API helpers ---
 async function getAll() {
   const r = await fetch("/results");
   if (!r.ok) throw new Error("Failed to load items");
@@ -89,7 +89,7 @@ function hideAlert() {
   }
 }
 
-// form submit for index.html
+// --- Form submit for index.html ---
 function bindForm() {
   const form = $("bucketform");
   if (!form) return;
@@ -103,6 +103,7 @@ function bindForm() {
     const priority = $("priority").value;
     const targetDate = $("targetDate") ? $("targetDate").value : "";
 
+    // Validation
     if (!title || !category || !priority) {
       showAlert("Please fill out all required fields.");
       return;
@@ -123,7 +124,7 @@ function bindForm() {
   });
 }
 
-// render tables for results.html
+// --- Render tables for results.html ---
 async function renderResults() {
   const tbody = $("items-body");
   const completedBody = $("completed-body");
@@ -136,6 +137,7 @@ async function renderResults() {
 
     data.forEach((row /*, idx */) => {
       if (row.completed) {
+        // completed table
         if (completedBody) {
           const tr = document.createElement("tr");
           ["title", "category", "priority", "targetDate", "daysLeft", "addedAt"].forEach(key => {
@@ -145,9 +147,29 @@ async function renderResults() {
               : row[key] ?? "—";
             tr.appendChild(td);
           });
+
+          // --- NEW: Delete for completed items ---
+          const tdActions = document.createElement("td");
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn btn-danger btn-sm";
+          deleteBtn.textContent = "Delete";
+          deleteBtn.addEventListener("click", async () => {
+            try {
+              await deleteItem(row._id); // use _id
+              await renderResults();
+            } catch (err) {
+              console.error(err);
+              alert("Failed to delete item.");
+            }
+          });
+          tdActions.appendChild(deleteBtn);
+          tr.appendChild(tdActions);
+          // --- END new code ---
+
           completedBody.appendChild(tr);
         }
       } else {
+        // active table
         const tr = document.createElement("tr");
         const tdTitle = document.createElement("td");
         tdTitle.textContent = row.title;
@@ -176,7 +198,7 @@ async function renderResults() {
           }
         });
 
-        // --- NEW Delete Button ---
+        // --- NEW: Delete button for active items ---
         const deleteBtn = document.createElement("button");
         deleteBtn.className = "btn btn-danger btn-sm";
         deleteBtn.textContent = "Delete";
@@ -206,7 +228,7 @@ async function renderResults() {
   }
 }
 
-// run on page load
+// --- Run on page load ---
 window.addEventListener("DOMContentLoaded", async () => {
   bindForm();
   await renderResults();
