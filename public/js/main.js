@@ -1,12 +1,8 @@
 // // FRONT-END (CLIENT) JAVASCRIPT HERE
+// (leaving original sample commented out)
 
 // const submit = async function( event ) {
-//   // stop form submission from trying to load
-//   // a new .html page for displaying results...
-//   // this was the original browser behavior and still
-//   // remains to this day
 //   event.preventDefault()
-  
 //   const input = document.querySelector( "#yourname" ),
 //         json = { yourname: input.value },
 //         body = JSON.stringify( json )
@@ -17,12 +13,11 @@
 //   })
 
 //   const text = await response.text()
-
 //   console.log( "text:", text )
 // }
 
 // window.onload = function() {
-//    const button = document.querySelector("button");
+//   const button = document.querySelector("button");
 //   button.onclick = submit;
 // }
 
@@ -47,13 +42,34 @@ async function addItem(body) {
   return r.json();
 }
 
-async function markCompleted(rowIndex) {
-  const r = await fetch("/results", {
+// --- OLD: markCompleted using rowIndex ---
+// async function markCompleted(rowIndex) {
+//   const r = await fetch("/results", {
+//     method: "PUT",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({ row: rowIndex }),
+//   });
+//   if (!r.ok) throw new Error("Failed to mark completed");
+//   return r.text();
+// }
+
+// --- NEW: markCompleted using MongoDB _id ---
+async function markCompleted(id) {
+  const r = await fetch(`/results/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ row: rowIndex }),
   });
   if (!r.ok) throw new Error("Failed to mark completed");
+  return r.text();
+}
+
+// --- NEW: deleteItem ---
+async function deleteItem(id) {
+  const r = await fetch(`/results/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!r.ok) throw new Error("Failed to delete item");
   return r.text();
 }
 
@@ -87,13 +103,10 @@ function bindForm() {
     const priority = $("priority").value;
     const targetDate = $("targetDate") ? $("targetDate").value : "";
 
-    // Check required fields
     if (!title || !category || !priority) {
       showAlert("Please fill out all required fields.");
       return;
     }
-
-    // Optionally, check for valid date
     if (targetDate && isNaN(Date.parse(targetDate))) {
       showAlert("Please enter a valid date.");
       return;
@@ -101,8 +114,8 @@ function bindForm() {
 
     try {
       await addItem({ title, category, priority, targetDate });
-      form.reset(); // clear fields
-      window.location.href = "results.html"; // redirect
+      form.reset();
+      window.location.href = "results.html";
     } catch (err) {
       showAlert("Error adding item. Try again.");
       console.error(err);
@@ -121,9 +134,8 @@ async function renderResults() {
     tbody.innerHTML = "";
     if (completedBody) completedBody.innerHTML = "";
 
-    data.forEach((row, idx) => {
+    data.forEach((row /*, idx */) => {
       if (row.completed) {
-        // completed table
         if (completedBody) {
           const tr = document.createElement("tr");
           ["title", "category", "priority", "targetDate", "daysLeft", "addedAt"].forEach(key => {
@@ -136,7 +148,6 @@ async function renderResults() {
           completedBody.appendChild(tr);
         }
       } else {
-        // active table
         const tr = document.createElement("tr");
         const tdTitle = document.createElement("td");
         tdTitle.textContent = row.title;
@@ -153,11 +164,11 @@ async function renderResults() {
 
         const tdActions = document.createElement("td");
         const completeBtn = document.createElement("button");
-        completeBtn.className = "btn btn-success btn-sm";
+        completeBtn.className = "btn btn-success btn-sm me-2";
         completeBtn.textContent = "Mark Completed";
         completeBtn.addEventListener("click", async () => {
           try {
-            await markCompleted(idx);
+            await markCompleted(row._id); // --- CHANGED: use _id
             await renderResults();
           } catch (err) {
             console.error(err);
@@ -165,7 +176,21 @@ async function renderResults() {
           }
         });
 
-        tdActions.appendChild(completeBtn);
+        // --- NEW Delete Button ---
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-danger btn-sm";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", async () => {
+          try {
+            await deleteItem(row._id); // --- CHANGED: use _id
+            await renderResults();
+          } catch (err) {
+            console.error(err);
+            alert("Failed to delete item.");
+          }
+        });
+
+        tdActions.append(completeBtn, deleteBtn);
         tr.append(tdTitle, tdCat, tdPri, tdTarget, tdDays, tdAdded, tdActions);
         tbody.appendChild(tr);
       }

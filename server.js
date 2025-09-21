@@ -14,10 +14,9 @@ let collection;
 
 // Connect to MongoDB
 const client = new MongoClient(process.env.MONGO_URI);
-
 client.connect()
   .then(() => {
-    const db = client.db("bucketbuddy"); // match the DB name in your URI
+    const db = client.db("bucketbuddy"); // same as in your URI
     collection = db.collection("items");
     console.log("✅ Connected to MongoDB (bucketbuddy DB)");
   })
@@ -25,21 +24,72 @@ client.connect()
     console.error("❌ MongoDB connection failed:", err);
   });
 
-// --- Test routes ---
+//  Test routes 
 app.get("/ping", (req, res) => res.send("pong"));
 
-app.get("/testdb", async (req, res) => {
+// bucket Buddy routes
+// Get all items
+app.get("/results", async (req, res) => {
   try {
-    const testDoc = { title: "Hello MongoDB", createdAt: new Date() };
-    await collection.insertOne(testDoc);
-    const docs = await collection.find({}).toArray();
-    res.json(docs);
+    const items = await collection.find({}).toArray();
+    res.json(items);
   } catch (err) {
-    res.status(500).send("DB test failed: " + err);
+    res.status(500).send("Failed to fetch items: " + err);
   }
 });
 
-// --- Future: bucket buddy routes (GET/POST/PUT/DELETE) go here ---
+// add new item
+app.post("/results", async (req, res) => {
+  try {
+    const { title, category, priority, targetDate } = req.body;
+    if (!title || !category || !priority) {
+      return res.status(400).send("Missing required fields");
+    }
+    const newItem = {
+      title,
+      category,
+      priority,
+      targetDate,
+      addedAt: new Date(),
+      completed: false,
+    };
+    const result = await collection.insertOne(newItem);
+    res.json({ ...newItem, _id: result.insertedId });
+  } catch (err) {
+    res.status(500).send("Failed to add item: " + err);
+  }
+});
+
+// mark a item copleted
+app.put("/results/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { completed: true } }
+    );
+    if (result.modifiedCount === 0) {
+      return res.status(404).send("Item not found");
+    }
+    res.send("Marked completed");
+  } catch (err) {
+    res.status(500).send("Failed to update item: " + err);
+  }
+});
+
+// Delete item
+app.delete("/results/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).send("Item not found");
+    }
+    res.send("Deleted");
+  } catch (err) {
+    res.status(500).send("Failed to delete item: " + err);
+  }
+});
 
 app.listen(port, () => {
   console.log(`🚀 Server running on http://localhost:${port}`);
