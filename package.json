@@ -7,9 +7,13 @@
     "start": "node server.improved.js"
   },
   "dependencies": {
+    "connect-mongo": "^5.1.0",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "express-session": "^1.18.2",
     "mime": "^2.6.0",
-    "mongodb": "^6.20.0"
+    "mongodb": "^6.20.0",
+    "passport": "^0.7.0",
+    "passport-github2": "^0.1.12"
   }
 }
