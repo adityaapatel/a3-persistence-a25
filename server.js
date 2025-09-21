@@ -16,19 +16,19 @@ app.use(express.static(path.join(__dirname, "public")));
 
 let db, collection;
 
-// ----- MongoDB -----
+// connect to mongo
 const client = new MongoClient(process.env.MONGO_URI);
 client.connect()
   .then(() => {
     db = client.db("bucketbuddy");
     collection = db.collection("items");
-    console.log("✅ Connected to MongoDB (bucketbuddy DB)");
+    console.log("✅ mongo ok");
   })
   .catch(err => {
-    console.error("❌ MongoDB connection failed:", err);
+    console.error("❌ mongo fail:", err);
   });
 
-// ----- Sessions -----
+// session stuff (keep track of who’s logged in)
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "change-me",
@@ -42,12 +42,12 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      maxAge: 1000 * 60 * 60 * 24 * 7, // week
     },
   })
 );
 
-// ----- Passport GitHub OAuth -----
+// github login setup
 passport.use(
   new GitHubStrategy(
     {
@@ -56,7 +56,7 @@ passport.use(
       callbackURL: "/auth/github/callback",
     },
     (accessToken, refreshToken, profile, done) => {
-      // Keep user minimal
+      // just save tiny bit of user info
       const user = { id: profile.id, username: profile.username };
       return done(null, user);
     }
@@ -69,17 +69,27 @@ passport.deserializeUser((user, done) => done(null, user));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ----- Auth routes -----
+// when u go to root, if logged in → results, else → login
+app.get("/", (req, res) => {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    res.redirect("/results.html");
+  } else {
+    res.redirect("/login.html");
+  }
+});
+
+// routes for github login
 app.get("/auth/github", passport.authenticate("github", { scope: ["user:email"] }));
 
 app.get(
   "/auth/github/callback",
   passport.authenticate("github", { failureRedirect: "/login.html" }),
   (req, res) => {
-    res.redirect("/results.html"); // redirect after login
+    res.redirect("/results.html");
   }
 );
 
+// logout route
 app.post("/logout", (req, res, next) => {
   req.logout(err => {
     if (err) return next(err);
@@ -90,45 +100,39 @@ app.post("/logout", (req, res, next) => {
   });
 });
 
-// Debug: who am I
+// check who u are (debug)
 app.get("/me", (req, res) => {
   res.json({ user: req.user || null });
 });
 
-// ----- Middleware to require login -----
+// only let ppl in if logged in
 function ensureLoggedIn(req, res, next) {
   if (req.isAuthenticated && req.isAuthenticated()) return next();
-  res.status(401).send("Not authorized. Please log in at /login.html");
+  res.status(401).send("login first bro");
 }
 
-// ----- Test route -----
+// quick test route
 app.get("/ping", (req, res) => res.send("pong"));
 
-// ----- Bucket Buddy routes (now protected) -----
-// OLD (unprotected):
-// app.get("/results", async (req, res) => { ... })
-// app.post("/results", async (req, res) => { ... })
-// app.put("/results/:id", async (req, res) => { ... })
-// app.delete("/results/:id", async (req, res) => { ... })
-// --- REMOVED these and replaced with below, all guarded by ensureLoggedIn ---
-
+// get all items for that user
 app.get("/results", ensureLoggedIn, async (req, res) => {
   try {
     const items = await collection.find({ userId: req.user.id }).toArray();
     res.json(items);
   } catch (err) {
-    res.status(500).send("Failed to fetch items: " + err);
+    res.status(500).send("cant get items: " + err);
   }
 });
 
+// add new item
 app.post("/results", ensureLoggedIn, async (req, res) => {
   try {
     const { title, category, priority, targetDate } = req.body;
     if (!title || !category || !priority) {
-      return res.status(400).send("Missing required fields");
+      return res.status(400).send("missing stuff");
     }
     const newItem = {
-      userId: req.user.id, // ✅ tie to GitHub user
+      userId: req.user.id,
       title,
       category,
       priority,
@@ -139,10 +143,11 @@ app.post("/results", ensureLoggedIn, async (req, res) => {
     const result = await collection.insertOne(newItem);
     res.json({ ...newItem, _id: result.insertedId });
   } catch (err) {
-    res.status(500).send("Failed to add item: " + err);
+    res.status(500).send("cant add item: " + err);
   }
 });
 
+// mark done
 app.put("/results/:id", ensureLoggedIn, async (req, res) => {
   try {
     const { id } = req.params;
@@ -151,28 +156,29 @@ app.put("/results/:id", ensureLoggedIn, async (req, res) => {
       { $set: { completed: true } }
     );
     if (result.modifiedCount === 0) {
-      return res.status(404).send("Item not found");
+      return res.status(404).send("not found");
     }
-    res.send("Marked completed");
+    res.send("done!");
   } catch (err) {
-    res.status(500).send("Failed to update item: " + err);
+    res.status(500).send("cant update: " + err);
   }
 });
 
+// delete
 app.delete("/results/:id", ensureLoggedIn, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await collection.deleteOne({ _id: new ObjectId(id), userId: req.user.id });
     if (result.deletedCount === 0) {
-      return res.status(404).send("Item not found");
+      return res.status(404).send("not found");
     }
-    res.send("Deleted");
+    res.send("deleted");
   } catch (err) {
-    res.status(500).send("Failed to delete item: " + err);
+    res.status(500).send("cant delete: " + err);
   }
 });
 
-// ----- Start server -----
+// start it up
 app.listen(port, () => {
-  console.log(`🚀 Server running on http://localhost:${port}`);
+  console.log(`🚀 server @ http://localhost:${port}`);
 });

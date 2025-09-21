@@ -1,24 +1,25 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>CS4241 Assignment 2 — Bucket Buddy</title>
+    <title>CS4241 Assignment 3 — Bucket Buddy</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-    <!-- Bootstrap CSS -->
+    <!-- bootstrap css -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   </head>
   <body>
+    <!-- nav bar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
       <div class="container-fluid">
         <h1 class="navbar-brand mb-0">Bucket Buddy</h1>
-        <div class="navbar-nav">
-          <span class="nav-link active">Home</span>
-          <a class="nav-link" href="results.html">All Items</a>
+        <div class="navbar-nav ms-auto" id="auth-nav">
+          <!-- js fills this -->
         </div>
       </div>
     </nav>
 
+    <!-- main form -->
     <div class="container main">
       <form id="bucketform" class="mb-4">
         <h2>Add Bucket List Item</h2>
@@ -26,11 +27,13 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label for="title" class="form-label">Title:</label>
+            <!-- item title -->
             <input type="text" id="title" class="form-control" placeholder="e.g., Skydive in Hawaiʻi" required>
           </div>
 
           <div class="col-md-6">
             <label for="category" class="form-label">Category:</label>
+            <!-- dropdown for category -->
             <select id="category" class="form-select" required>
               <option value="" selected disabled>Select a category</option>
               <option>Travel</option>
@@ -43,6 +46,7 @@
 
           <div class="col-md-6">
             <label for="priority" class="form-label">Priority:</label>
+            <!-- dropdown for priority -->
             <select id="priority" class="form-select" required>
               <option value="" selected disabled>Select priority</option>
               <option>low</option>
@@ -53,18 +57,54 @@
 
           <div class="col-md-6">
             <label for="targetDate" class="form-label">Target Date:</label>
+            <!-- date input -->
             <input type="date" id="targetDate" class="form-control">
           </div>
         </div>
 
+        <!-- alert msg -->
         <div id="form-alert" class="alert alert-danger d-none" role="alert"></div>
 
+        <!-- button -->
         <button type="submit" class="btn btn-primary mt-3">Submit</button>
       </form>
 
       <p id="response-message" aria-live="polite"></p>
     </div>
+
+    <!-- bootstrap + main js -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script defer src="js/main.js"></script>
+
+    <!-- nav updater js -->
+    <script>
+      async function updateNavbar() {
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          const nav = document.getElementById("auth-nav");
+          nav.innerHTML = "";
+
+          if (data.user) {
+            // if logged in → show links + logout
+            nav.innerHTML = `
+              <a class="nav-link" href="index.html">Home</a>
+              <a class="nav-link" href="results.html">All Items</a>
+              <form method="post" action="/logout" class="d-inline">
+                <button type="submit" class="btn btn-outline-danger btn-sm ms-2">Logout</button>
+              </form>
+            `;
+          } else {
+            // if not logged in → show login
+            nav.innerHTML = `
+              <a class="nav-link" href="login.html">Login</a>
+            `;
+          }
+        } catch (err) {
+          console.error("navbar broke", err);
+        }
+      }
+      updateNavbar();
+    </script>
   </body>
 </html>
