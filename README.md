@@ -1,6 +1,7 @@
 Assignment 3 - Persistence: Express + MongoDB + OAuth  
 ===  
 Aditya Patel  
+https://a3-adityapatel.onrender.com
 
 ## Bucket Buddy
 This is my updated web app called **Bucket Buddy**. It lets users log in with GitHub, create bucket list items, view them, mark them completed, or delete them. The site uses **Express** for the server, **MongoDB Atlas** for persistent storage, and **Bootstrap** for styling.  
@@ -11,8 +12,6 @@ Irt has three main pages:
 - **All Items page** (results.tml): shows all your items, both active and completed, with actions.  
 
 Every item is tied to he logged-in GitHub user, so users only see their own bucket list.  
-
----
 ## Technical Achievements
 
 **Tech Achievement 1: Express server with MongoDB persistence**  
@@ -75,6 +74,8 @@ Every item is tied to he logged-in GitHub user, so users only see their own buck
 ---
 
 ## Lighthouse Scores
+che out Lighthouse.png
+
 I tested in Chrome DevTools:  
 - Performance: ~100  
 - Best Practices: 95  
