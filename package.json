@@ -1,0 +1,12 @@
+{
+  "name": "a2-AdityaPatel",
+  "version": "1.0.0",
+  "description": "Assignment 2 — Bucket Buddy",
+  "author": "Aditya Patel",
+  "scripts": {
+    "start": "node server.improved.js"
+  },
+  "dependencies": {
+    "mime": "^2.6.0"
+  }
+}

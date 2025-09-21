@@ -1,0 +1,63 @@
+/* bg */
+body {
+  background: black;
+  color: white;
+}
+
+/* msg */
+#response-message {
+  margin-top: 1rem;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+/* box */
+.main {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.07);
+}
+
+/* tip */
+.note {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+/* table */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 1rem;
+}
+th, td {
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+thead th {
+  background-color: #334155;
+  color: #fff;
+}
+tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* btn */
+button {
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+}
+
+/* nav */
+nav .navbar-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+/* grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
