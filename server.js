@@ -1,4 +1,6 @@
 // server.js
+process.env.NODE_OPTIONS = "--openssl-legacy-provider"; // 🛠 Fix for OpenSSL TLS issue on Render
+
 const express = require("express");
 const path = require("path");
 const { MongoClient, ObjectId } = require("mongodb");
@@ -11,27 +13,29 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.set("trust proxy", 1); // ✅ needed on Render for secure cookies
+app.set("trust proxy", 1); // ✅ required on Render for secure cookies
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 let db, collection;
 
-// ✅ CONNECT TO MONGO WITH TLS OPTIONS
+// ✅ Robust MongoDB connection with SSL fallback
 async function connectDB() {
   try {
     const client = new MongoClient(process.env.MONGO_URI, {
-      tls: true,
-      tlsAllowInvalidCertificates: false,
+      ssl: true,
+      sslValidate: true,
+      minTLSVersion: "TLS1_2",
       serverSelectionTimeoutMS: 10000,
     });
+
     await client.connect();
-    console.log("✅ mongo ok");
+    console.log("✅ MongoDB connected successfully");
 
     db = client.db("bucketbuddy");
     collection = db.collection("items");
 
-    // ✅ session store AFTER successful connection
+    // ✅ Initialize session store after Mongo is connected
     app.use(
       session({
         secret: process.env.SESSION_SECRET || "change-me",
@@ -45,7 +49,7 @@ async function connectDB() {
         cookie: {
           httpOnly: true,
           sameSite: "lax",
-          secure: true, // ✅ secure cookies on Render (https)
+          secure: process.env.NODE_ENV === "production", // only secure on https
           maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
         },
       })
@@ -54,11 +58,11 @@ async function connectDB() {
     setupAuthRoutes();
     startServer();
   } catch (err) {
-    console.error("❌ mongo fail:", err);
+    console.error("❌ Mongo connection failed:", err);
   }
 }
 
-// ✅ SETUP GITHUB AUTH
+// ✅ GitHub Authentication Setup
 function setupAuthRoutes() {
   passport.use(
     new GitHubStrategy(
@@ -80,7 +84,7 @@ function setupAuthRoutes() {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // routes
+  // Landing routes
   app.get("/", (req, res) => {
     if (req.isAuthenticated && req.isAuthenticated()) {
       res.redirect("/results.html");
@@ -113,12 +117,13 @@ function setupAuthRoutes() {
     res.json({ user: req.user || null });
   });
 
-  // protect routes
+  // Middleware for protected routes
   function ensureLoggedIn(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) return next();
     res.status(401).send("login first bro");
   }
 
+  // Routes
   app.get("/ping", (req, res) => res.send("pong"));
 
   app.get("/results", ensureLoggedIn, async (req, res) => {
@@ -185,9 +190,9 @@ function setupAuthRoutes() {
   });
 }
 
-// ✅ start after mongo success
+// ✅ Start server only after DB connects
 function startServer() {
-  app.listen(port, () => console.log(`🚀 server @ http://localhost:${port}`));
+  app.listen(port, () => console.log(`🚀 Server live @ http://localhost:${port}`));
 }
 
 connectDB();
