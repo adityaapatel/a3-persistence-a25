@@ -19,14 +19,11 @@ app.use(express.static(path.join(__dirname, "public")));
 
 let db, collection;
 
-// ✅ Robust MongoDB connection with SSL fallback
+// ✅ MongoDB connection (for driver v6+)
 async function connectDB() {
   try {
     const client = new MongoClient(process.env.MONGO_URI, {
-      ssl: true,
-      sslValidate: true,
-      minTLSVersion: "TLS1_2",
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 10000, // 10s timeout
     });
 
     await client.connect();
@@ -35,7 +32,7 @@ async function connectDB() {
     db = client.db("bucketbuddy");
     collection = db.collection("items");
 
-    // ✅ Initialize session store after Mongo is connected
+    // ✅ Initialize session store AFTER successful connection
     app.use(
       session({
         secret: process.env.SESSION_SECRET || "change-me",
@@ -49,7 +46,7 @@ async function connectDB() {
         cookie: {
           httpOnly: true,
           sameSite: "lax",
-          secure: process.env.NODE_ENV === "production", // only secure on https
+          secure: process.env.NODE_ENV === "production", // https only on Render
           maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
         },
       })
